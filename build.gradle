@@ -1,0 +1,104 @@
+buildscript {
+	ext {
+		springBootVersion = '1.3.3.RELEASE'
+	}
+	repositories {
+		mavenCentral()
+		maven {
+			url "https://plugins.gradle.org/m2/"
+		}
+	}
+	dependencies {
+		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+		classpath "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:1.2"
+	}
+}
+
+apply plugin: 'java'
+apply plugin: 'idea'
+apply plugin: 'spring-boot' 
+apply plugin: 'war'
+apply plugin: 'org.sonarqube'
+apply plugin: "jacoco"
+
+war {
+    baseName = 'application'
+}
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+configurations {
+    providedRuntime
+}
+
+dependencies {
+    compile('org.springframework.boot:spring-boot-starter-jersey')
+    compile('org.springframework.boot:spring-boot-starter-web')
+    compile('org.springframework.boot:spring-boot-starter-actuator')
+	//compile('org.springframework.boot:spring-boot-starter-data-jpa')
+
+	// todo: sleuth conflicteert nu daarom uitgezet.
+	//compile('org.springframework.cloud:spring-cloud-starter-sleuth')
+	//compile('org.jolokia:jolokia-core:1.3.2')
+
+//	compile('net.logstash.logback:logstash-logback-encoder:4.5.1')
+	compile('net.logstash.logback:logstash-logback-encoder:4.7')
+	
+	//compile('com.h2database:h2')
+	compile('com.fasterxml.jackson.dataformat:jackson-dataformat-csv:2.2.3')
+
+	// Swagger
+	compile('io.springfox:springfox-swagger2:2.2.2')
+	compile('io.springfox:springfox-swagger-ui:2.2.2')
+
+	// Oauth
+	compile('org.springframework.security.oauth:spring-security-oauth2:2.0.4.RELEASE')
+
+	// Joda: please, replace by Java api!
+	compile('joda-time:joda-time:2.8.2')
+
+	// Jackson
+	compile('com.fasterxml.jackson.datatype:jackson-datatype-joda:2.6.3')
+
+	testCompile('com.jayway.restassured:rest-assured:2.4.1')
+	testCompile('org.springframework.boot:spring-boot-starter-test')
+    testCompile('junit:junit:4.12')
+
+    providedRuntime('org.springframework.boot:spring-boot-starter-tomcat')
+}
+
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.7'
+}
+
+
+task updateVersion << {
+    println "Now updating project version to $newVersion on build date $buildDate.";
+    ant.propertyfile(file: "src/main/resources/application.properties") {
+        entry( key: "info.build.version", value: "$newVersion", operation: "=")
+        entry( key: "info.build.date", value: "$buildDate", operation: "=")
+    }
+}
+
+processResources.mustRunAfter updateVersion
+
+
+sonarqube {
+    properties {
+        property "sonar.exclusions", ["**/resources/**",
+                                      "**/com/alliander/xxx/**"
+                                      ]
+    }
+}
+
+task sonarQualityCheck << {
+    def location = project.getProperties()["sonarLocation"] != null ? project.getProperties()["sonarLocation"] : "http://localhost:9000"
+    def project = project.getProperties()["sonarProjectKey"] != null ? project.getProperties()["sonarProjectKey"] : rootProject.name
+    println("Checking " + project + " on " + location)
+    new GroovyShell().run(file('sonar.groovy'), location, project)
+}
