@@ -4,10 +4,18 @@ node {
 	stage "Checkout"
 	git url: "https://github.com/drighart/template.micro.service"
 	
-	stage "Build/Analyse/Test"
-    sh "./gradle clean build"
-    archiveUnitTestResults()
-    archiveCheckstyleResults()
+	stage "Build"
+      sh 'chmod 755 gradlew'
+      sh './gradlew clean build'
+//    archiveUnitTestResults()
+//    archiveCheckstyleResults()
+
+	stage "Code analysis"
+
+	stage "Build docker image"
+	
+	stage "Integration tests"
+
 }
 
 def archiveUnitTestResults() {
